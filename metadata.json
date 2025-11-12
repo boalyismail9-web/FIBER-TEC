@@ -1,0 +1,7 @@
+{
+  "name": "Fiber Tec",
+  "description": "An application for managing client data, featuring data entry, database access, and settings configuration, designed with a clean and user-friendly interface.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

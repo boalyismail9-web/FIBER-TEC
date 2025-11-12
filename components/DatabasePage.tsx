@@ -1,0 +1,150 @@
+import React, { useState } from 'react';
+import PageWrapper from './PageWrapper';
+import { FormData } from '../types';
+import SearchIcon from './icons/SearchIcon';
+import TrashIcon from './icons/TrashIcon';
+import PencilIcon from './icons/PencilIcon';
+import ShareIcon from './icons/ShareIcon';
+import ConfirmationModal from './ConfirmationModal';
+
+interface DatabasePageProps {
+  onBack: () => void;
+  records: FormData[];
+  onEdit: (index: number) => void;
+  onDelete: (index: number) => void;
+}
+
+const DatabasePage: React.FC<DatabasePageProps> = ({ onBack, records, onEdit, onDelete }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isSharing, setIsSharing] = useState(false);
+  const [modalState, setModalState] = useState<{isOpen: boolean; index: number | null}>({ isOpen: false, index: null });
+
+  const handleShare = async (record: FormData) => {
+    if (isSharing) {
+      return;
+    }
+
+    const shareText = `
+معلومات العميل:
+اسم العميل: ${record.clientName}
+رقم CIN: ${record.cin}
+رقم SIP: ${record.sip}
+MAC Address: ${record.macAddress}
+GPON-SN: ${record.gponSn}
+D-SN: ${record.dSn}
+طول الكابل: ${record.cableLength} م
+السرعة المشتركة: ${record.subscriptionSpeed}
+نوع التدخل: ${record.interventionType}
+    `.trim();
+    if (navigator.share) {
+      try {
+        setIsSharing(true);
+        await navigator.share({
+          title: `بيانات العميل: ${record.clientName}`,
+          text: shareText,
+        });
+      } catch (error) {
+        if ((error as Error).name !== 'AbortError') {
+            console.error('خطأ في مشاركة البيانات:', error);
+        }
+      } finally {
+        setIsSharing(false);
+      }
+    } else {
+      // Fallback for browsers that don't support Web Share API
+      navigator.clipboard.writeText(shareText);
+      alert('تم نسخ بيانات العميل إلى الحافظة.');
+    }
+  };
+
+  const filteredRecords = records
+    .map((record, index) => ({ record, originalIndex: index }))
+    .filter(({ record }) =>
+      record.sip.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.clientName.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+  const handleDeleteRequest = (index: number) => {
+    setModalState({ isOpen: true, index: index });
+  };
+
+  const handleConfirmDelete = () => {
+    if (modalState.index !== null) {
+      onDelete(modalState.index);
+    }
+    handleCloseModal();
+  };
+
+  const handleCloseModal = () => {
+    setModalState({ isOpen: false, index: null });
+  };
+
+
+  return (
+    <PageWrapper title="قاعدة البيانات" onBack={onBack}>
+      <div className="space-y-6">
+        <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md space-y-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="ابحث في السجلات..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full py-3 pr-4 pl-10 text-lg bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            />
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <SearchIcon className="w-6 h-6 text-gray-400" />
+            </div>
+          </div>
+          <p className="text-gray-600 font-medium">
+            إجمالي العملاء المسجلين: {records.length}
+          </p>
+        </div>
+
+        {filteredRecords.length > 0 ? (
+          <div className="space-y-4">
+            {filteredRecords.map(({ record, originalIndex }) => (
+              <div key={originalIndex} className="bg-white p-4 rounded-xl shadow-md flex justify-between items-center animate-fade-in">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-800">{record.clientName}</h3>
+                  <p className="text-gray-500">{record.sip}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => onEdit(originalIndex)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-full transition-colors" aria-label="تعديل">
+                    <PencilIcon className="w-6 h-6" />
+                  </button>
+                   <button 
+                    onClick={() => handleShare(record)} 
+                    className="p-2 text-green-600 hover:bg-green-100 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed" 
+                    aria-label="مشاركة"
+                    disabled={isSharing}
+                  >
+                    <ShareIcon className="w-6 h-6" />
+                  </button>
+                  <button onClick={() => handleDeleteRequest(originalIndex)} className="p-2 text-red-600 hover:bg-red-100 rounded-full transition-colors" aria-label="حذف">
+                    <TrashIcon className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white p-10 rounded-xl shadow-md">
+            <p className="text-center text-gray-500 py-10">
+              لا توجد سجلات مطابقة لبحثك أو لم يتم إضافة أي سجلات بعد.
+            </p>
+          </div>
+        )}
+      </div>
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmDelete}
+        title="تأكيد الحذف"
+        message="هل أنت متأكد أنك تريد حذف هذا السجل؟ لا يمكن التراجع عن هذا الإجراء."
+      />
+    </PageWrapper>
+  );
+};
+
+export default DatabasePage;
