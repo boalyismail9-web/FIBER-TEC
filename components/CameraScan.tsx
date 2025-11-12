@@ -14,7 +14,8 @@ const CameraScan: React.FC<CameraScanProps> = ({ onBack, onCapture, isProcessing
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
-  const captureIntervalRef = useRef<number | null>(null);
+  const [countdown, setCountdown] = useState(5);
+  const captureTriggeredRef = useRef(false);
 
   useEffect(() => {
     // When the camera view is active, prevent the body from scrolling.
@@ -57,32 +58,39 @@ const CameraScan: React.FC<CameraScanProps> = ({ onBack, onCapture, isProcessing
     };
   }, [facingMode]);
 
+  const captureFrame = () => {
+    if (!videoRef.current || !canvasRef.current || videoRef.current.readyState < 3) {
+        return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const context = canvas.getContext('2d');
+    if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
+        onCapture(imageData);
+    }
+  };
+
   useEffect(() => {
-    const captureFrame = () => {
-        if (isProcessing || !videoRef.current || !canvasRef.current || videoRef.current.readyState < 3) {
-            return;
-        }
+    if (isProcessing || captureTriggeredRef.current) {
+      return;
+    }
 
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext('2d');
-        if (context) {
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const imageData = canvas.toDataURL('image/jpeg').split(',')[1];
-            onCapture(imageData);
-        }
-    };
+    if (countdown > 0) {
+      const timerId = setTimeout(() => {
+        setCountdown(prev => prev - 1);
+      }, 1000);
+      return () => clearTimeout(timerId);
+    } else {
+      captureTriggeredRef.current = true;
+      captureFrame();
+    }
+  }, [countdown, isProcessing]);
 
-    captureIntervalRef.current = window.setInterval(captureFrame, 2000); // Capture every 2 seconds
-
-    return () => {
-        if (captureIntervalRef.current) {
-            window.clearInterval(captureIntervalRef.current);
-        }
-    };
-  }, [isProcessing, onCapture]);
 
   const handleFlipCamera = () => {
     setFacingMode(prevMode => (prevMode === 'user' ? 'environment' : 'user'));
@@ -95,7 +103,7 @@ const CameraScan: React.FC<CameraScanProps> = ({ onBack, onCapture, isProcessing
       <canvas ref={canvasRef} className="hidden" />
 
       {/* Viewfinder overlay and content */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none">
+      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none text-center">
         <div
           className="relative w-11/12 max-w-sm aspect-[4/3] overflow-hidden"
           style={{ boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)' }}
@@ -105,13 +113,23 @@ const CameraScan: React.FC<CameraScanProps> = ({ onBack, onCapture, isProcessing
           <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"></div>
           <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"></div>
           <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"></div>
+          
+          {countdown > 0 && (
+             <div className="absolute inset-0 flex items-center justify-center">
+               <span className="text-white text-8xl font-bold drop-shadow-lg" style={{ WebkitTextStroke: '2px black' }}>
+                 {countdown}
+               </span>
+             </div>
+          )}
 
           {/* Scanning Line */}
-          <div className="absolute left-0 right-0 h-1 bg-blue-400 shadow-[0_0_15px_3px_#3B82F6] animate-scan-line"></div>
+          {countdown > 0 && (
+            <div className="absolute left-0 right-0 h-1 bg-blue-400 shadow-[0_0_15px_3px_#3B82F6] animate-scan-line"></div>
+          )}
         </div>
 
-        <p className="text-white text-lg font-semibold mt-6 drop-shadow-lg">
-          ضع الرمز داخل الإطار
+        <p className="text-white text-lg font-semibold mt-6 drop-shadow-lg px-4">
+          {countdown > 0 ? 'ثبّت الكاميرا... سيتم المسح تلقائيًا' : 'جاري المسح...'}
         </p>
       </div>
 

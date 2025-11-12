@@ -24,18 +24,25 @@ const DatabasePage: React.FC<DatabasePageProps> = ({ onBack, records, onEdit, on
       return;
     }
 
-    const shareText = `
-معلومات العميل:
-اسم العميل: ${record.clientName}
-رقم CIN: ${record.cin}
-رقم SIP: ${record.sip}
-MAC Address: ${record.macAddress}
-GPON-SN: ${record.gponSn}
-D-SN: ${record.dSn}
-طول الكابل: ${record.cableLength} م
-السرعة المشتركة: ${record.subscriptionSpeed}
-نوع التدخل: ${record.interventionType}
-    `.trim();
+    const formatSpeed = (speed: string) => {
+        if (!speed) return '';
+        return speed.replace('MIGA', 'M/s').replace('GO', 'G/s');
+    };
+
+    const shareText = `CLIENT         : *${record.clientName.toUpperCase()}*
+SIP                : *${record.sip}*
+CÂBLE          : *${record.cableLength}m*
+SOUSCRIT    : *${formatSpeed(record.subscriptionSpeed)}*
+MAC              : *${record.macAddress}*
+GPON-SN     : *${record.gponSn}*
+D-SN             : *${record.dSn}*
+Carte CIN     : *${record.cin}*
+Jarretière     : *${record.jarretiereCount}*
+Brise PTO    : *${record.brisePtoCount}*
+Téléphone fix : *${record.landline}*
+*Equipement*  : *${record.equipmentType}*
+*${record.interventionType}*`;
+    
     if (navigator.share) {
       try {
         setIsSharing(true);
