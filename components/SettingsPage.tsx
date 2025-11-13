@@ -8,36 +8,35 @@ import ConfirmationModal from './ConfirmationModal';
 import KeyIcon from './icons/KeyIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 
-
 interface SettingsPageProps {
   onBack: () => void;
   records: FormData[];
   onRestore: (data: FormData[]) => void;
   onClearAll: () => void;
   showToast: (message: string, type: 'success' | 'error') => void;
+  apiKey: string;
+  onSaveApiKey: (key: string) => void;
+  onClearApiKey: () => void;
 }
 
-const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, records, onRestore, onClearAll, showToast }) => {
+const SettingsPage: React.FC<SettingsPageProps> = ({ 
+    onBack, 
+    records, 
+    onRestore, 
+    onClearAll, 
+    showToast,
+    apiKey,
+    onSaveApiKey,
+    onClearApiKey,
+}) => {
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [restoreFileData, setRestoreFileData] = useState<FormData[] | null>(null);
+  const [inputApiKey, setInputApiKey] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [apiKey, setApiKey] = useState('');
 
   useEffect(() => {
-    const savedKey = localStorage.getItem('geminiApiKey');
-    if (savedKey) {
-        setApiKey(savedKey);
-    }
-  }, []);
-
-  const handleSaveKey = () => {
-    if (apiKey.trim() === '') {
-        showToast('الرجاء إدخال مفتاح API صالح.', 'error');
-        return;
-    }
-    localStorage.setItem('geminiApiKey', apiKey);
-    showToast('تم حفظ مفتاح API بنجاح!', 'success');
-  };
+    setInputApiKey(apiKey);
+  }, [apiKey]);
 
   const handleBackup = () => {
     if (records.length === 0) {
@@ -60,6 +59,14 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, records, onRestore,
 
   const handleRestoreClick = () => {
     fileInputRef.current?.click();
+  };
+  
+  const handleSaveApiKey = () => {
+    if (inputApiKey.trim() === '') {
+        showToast('يرجى إدخال مفتاح API صالح.', 'error');
+        return;
+    }
+    onSaveApiKey(inputApiKey.trim());
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,17 +116,20 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, records, onRestore,
     onClick: () => void;
     icon: React.ReactNode;
     text: string;
-    colorClass?: 'blue' | 'red';
-  }> = ({ onClick, icon, text, colorClass = 'blue' }) => {
+    colorClass?: 'blue' | 'red' | 'gray';
+    disabled?: boolean;
+  }> = ({ onClick, icon, text, colorClass = 'blue', disabled = false }) => {
       const colors = {
           blue: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
-          red: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500'
+          red: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
+          gray: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
       };
       return (
         <button
           type="button"
           onClick={onClick}
-          className={`flex items-center justify-center gap-3 w-full sm:w-auto font-bold py-3 px-6 rounded-lg text-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors[colorClass]}`}
+          disabled={disabled}
+          className={`flex items-center justify-center gap-3 w-full sm:w-auto font-bold py-3 px-6 rounded-lg text-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${colors[colorClass]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
           {icon}
           <span>{text}</span>
@@ -139,43 +149,51 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ onBack, records, onRestore,
 
         <div className="max-w-3xl mx-auto space-y-8">
             <div className="bg-white p-6 rounded-xl shadow-md">
-                <h2 className="text-2xl font-bold text-gray-800 mb-2 text-right">إعدادات API</h2>
-                <p className="text-gray-500 mb-6 text-right">
-                    أضف مفتاح Google AI API الخاص بك لتمكين ميزة المسح الضوئي للبيانات.
+                <h2 className="text-2xl font-bold text-gray-800 mb-2 text-right">مفتاح Gemini API</h2>
+                <p className="text-gray-500 mb-4 text-right">
+                    أدخل مفتاح Gemini API الخاص بك لتمكين ميزات المسح الضوئي للصور.
                 </p>
                 <div className="space-y-4">
-                    <div>
-                        <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 text-right mb-1">
-                            مفتاح Google AI API
-                        </label>
-                        <div className="relative">
-                            <input
-                                type="password"
-                                id="apiKey"
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                                placeholder="أدخل مفتاح API هنا"
-                                className="w-full py-3 pr-10 pl-4 text-lg bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-left"
-                                dir="ltr"
-                            />
-                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                                <KeyIcon className="w-6 h-6 text-gray-400" />
-                            </div>
+                    <div className="relative">
+                        <input
+                            type="password"
+                            placeholder="الصق مفتاح API هنا..."
+                            value={inputApiKey}
+                            onChange={(e) => setInputApiKey(e.target.value)}
+                            className="w-full py-3 pr-4 pl-10 text-lg bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-left"
+                            dir="ltr"
+                        />
+                         <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                            <KeyIcon className="w-6 h-6 text-gray-400" />
                         </div>
                     </div>
-                    <div className="text-right">
-                         <ActionButton
-                            onClick={handleSaveKey}
+                    {apiKey && (
+                        <p className="text-sm text-green-700 text-right">
+                            المفتاح محفوظ حاليًا وينتهي بـ: ****{apiKey.slice(-4)}
+                        </p>
+                    )}
+                     <p className="text-xs text-gray-500 text-right">
+                       يتم تخزين مفتاحك محليًا في متصفحك. تعامل معه بحذر.
+                    </p>
+                    <div className="flex flex-col sm:flex-row justify-start gap-4">
+                        <ActionButton
+                            onClick={handleSaveApiKey}
                             icon={<CheckCircleIcon className="w-6 h-6" />}
                             text="حفظ المفتاح"
                             colorClass="blue"
                         />
+                        {apiKey && (
+                             <ActionButton
+                                onClick={onClearApiKey}
+                                icon={<TrashIcon className="w-6 h-6" />}
+                                text="مسح المفتاح"
+                                colorClass="gray"
+                            />
+                        )}
                     </div>
-                    <p className="text-xs text-gray-400 text-right mt-2">
-                        يمكنك الحصول على مفتاحك من Google AI Studio. المفتاح يُحفظ في متصفحك فقط.
-                    </p>
                 </div>
             </div>
+
 
             <div className="bg-white p-6 rounded-xl shadow-md">
                 <h2 className="text-2xl font-bold text-gray-800 mb-2 text-right">النسخ الاحتياطي والاستعادة</h2>

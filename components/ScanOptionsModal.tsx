@@ -11,54 +11,60 @@ interface ScanOptionsModalProps {
 }
 
 const ScanOptionsModal: React.FC<ScanOptionsModalProps> = ({ isOpen, onClose, onFileSelect, onCameraSelect }) => {
-  if (!isOpen) return null;
+  const [isRendered, setIsRendered] = React.useState(isOpen);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setIsRendered(true);
+    } else {
+      const timer = setTimeout(() => {
+        setIsRendered(false);
+      }, 150); // Match transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen]);
+
+  if (!isRendered) {
+    return null;
+  }
 
   return (
     <div
-      className="fixed inset-0 bg-gray-600 bg-opacity-75 z-50 flex justify-center items-center p-4"
+      className={`fixed inset-0 bg-black z-50 flex justify-center items-center p-4 transition-opacity duration-150 ease-out ${isOpen ? 'bg-opacity-60' : 'bg-opacity-0'}`}
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl shadow-xl w-full max-w-md transform transition-all duration-300 p-6"
+        className={`bg-white rounded-2xl shadow-xl w-full max-w-xs transition-opacity duration-150 ease-out ${isOpen ? 'opacity-100' : 'opacity-0'}`}
         onClick={(e) => e.stopPropagation()}
-        style={{ animation: 'fadeInUp 0.3s ease-out' }}
       >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-gray-800">اختر طريقة الفحص</h2>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
-            <XIcon className="w-6 h-6" />
-          </button>
+        <div className="p-5 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-gray-800">اختر طريقة الفحص</h2>
+            <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full">
+              <XIcon className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <button
-            onClick={onFileSelect}
-            className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-300"
-          >
-            <UploadIcon className="w-10 h-10 text-blue-600 mb-3" />
-            <span className="text-base font-semibold text-gray-700">تحميل الملف</span>
-          </button>
-          <button
-            onClick={onCameraSelect}
-            className="flex flex-col items-center justify-center p-6 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-green-500 hover:bg-green-50 transition-all duration-300"
-          >
-            <CameraIcon className="w-10 h-10 text-green-600 mb-3" />
-            <span className="text-base font-semibold text-gray-700">استخدام الكاميرا</span>
-          </button>
+        <div className="p-5">
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => { onFileSelect(); onClose(); }}
+                className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              >
+                <UploadIcon className="w-8 h-8 text-blue-500 mb-2" />
+                <span className="text-sm font-semibold text-gray-700 text-center">تحميل الملف</span>
+              </button>
+              <button
+                onClick={() => { onCameraSelect(); onClose(); }}
+                className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-200 hover:border-green-400 hover:bg-green-50 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
+              >
+                <CameraIcon className="w-8 h-8 text-green-500 mb-2" />
+                <span className="text-sm font-semibold text-gray-700 text-center">استخدام الكاميرا</span>
+              </button>
+            </div>
         </div>
       </div>
-      <style>{`
-          @keyframes fadeInUp {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-       `}</style>
     </div>
   );
 };

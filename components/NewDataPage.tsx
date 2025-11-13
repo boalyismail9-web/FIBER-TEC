@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PageWrapper from './PageWrapper';
-import ViewfinderIcon from './icons/ViewfinderIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import TrashIcon from './icons/TrashIcon';
-import { FormData } from '../types';
+import { FormData, Page } from '../types';
 import ScanOptionsModal from './ScanOptionsModal';
-import CameraScan from './CameraScan';
-import { GoogleGenAI } from '@google/genai';
+import CameraIcon from './icons/CameraIcon';
 
 
 interface EditState {
@@ -20,6 +18,10 @@ interface NewDataPageProps {
   onUpdate: (index: number, data: FormData) => void;
   recordToEdit: EditState | null;
   showToast: (message: string, type: 'success' | 'error') => void;
+  navigateTo: (page: Page) => void;
+  scannedData: Partial<FormData> | null;
+  clearScannedData: () => void;
+  apiKey: string;
 }
 
 interface InputFieldProps {
@@ -38,7 +40,7 @@ const InputField: React.FC<InputFieldProps> = ({ id, label, isRtl = true, unit, 
             htmlFor={id}
             className={`block ${isRtl ? 'text-right' : 'text-left'} text-sm font-medium text-gray-700 mb-2`}
         >
-            {label} <span className="text-red-500">*</span>
+            {label} {id !== 'macAddress' && id !== 'gponSn' && id !== 'dSn' && <span className="text-red-500">*</span>}
         </label>
         <div className="relative">
             <input
@@ -113,12 +115,19 @@ const formatMacAddress = (mac: string): string => {
         ?.join(':') || '';
 };
 
-const NewDataPage: React.FC<NewDataPageProps> = ({ onBack, onSave, onUpdate, recordToEdit, showToast }) => {
+const NewDataPage: React.FC<NewDataPageProps> = ({ 
+    onBack, 
+    onSave, 
+    onUpdate, 
+    recordToEdit, 
+    showToast,
+    navigateTo,
+    scannedData,
+    clearScannedData,
+    apiKey
+}) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
-  const [isCameraViewOpen, setIsCameraViewOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditMode = recordToEdit !== null;
 
   useEffect(() => {
@@ -128,6 +137,20 @@ const NewDataPage: React.FC<NewDataPageProps> = ({ onBack, onSave, onUpdate, rec
       setFormData(initialFormData);
     }
   }, [recordToEdit, isEditMode]);
+
+  useEffect(() => {
+    if (scannedData) {
+        setFormData(prev => ({
+            ...prev,
+            macAddress: formatMacAddress(scannedData.macAddress || prev.macAddress),
+            gponSn: scannedData.gponSn || prev.gponSn,
+            dSn: scannedData.dSn || prev.dSn,
+        }));
+        showToast('تم تحديث البيانات الممسوحة ضوئيًا!', 'success');
+        clearScannedData();
+    }
+  }, [scannedData, clearScannedData, showToast]);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
@@ -165,106 +188,31 @@ const NewDataPage: React.FC<NewDataPageProps> = ({ onBack, onSave, onUpdate, rec
           }
       }
   };
-
-  const handleScanClick = () => {
-    const apiKey = localStorage.getItem('geminiApiKey');
-    if (!apiKey) {
-      showToast('الرجاء إضافة مفتاح API في الإعدادات أولاً.', 'error');
-      return;
-    }
-    setIsScanModalOpen(true);
-  };
-  
-  const handleFileSelect = () => {
-      setIsScanModalOpen(false);
-      fileInputRef.current?.click();
-  };
   
   const handleCameraSelect = () => {
-      setIsScanModalOpen(false);
-      setIsCameraViewOpen(true);
-  };
-  
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-              const base64String = (reader.result as string).split(',')[1];
-              processImage(base64String);
-          };
-          reader.readAsDataURL(file);
-      }
-      if (event.target) {
-          event.target.value = '';
-      }
-  };
-  
-  const handleCapture = (imageData: string) => {
-      processImage(imageData);
-  };
-  
-  const processImage = async (base64Image: string) => {
-    setIsProcessing(true);
-    
-    const apiKey = localStorage.getItem('geminiApiKey');
-
     if (!apiKey) {
-        showToast('الرجاء إضافة مفتاح API في الإعدادات أولاً.', 'error');
-        setIsProcessing(false);
-        return;
+      showToast('يجب عليك إضافة مفتاح API أولاً.', 'error');
+      setIsScanModalOpen(false);
+      return;
     }
-
-    try {
-        const ai = new GoogleGenAI({ apiKey });
-        
-        const imagePart = {
-            inlineData: {
-                mimeType: 'image/jpeg',
-                data: base64Image,
-            },
-        };
-
-        const textPart = {
-            text: `From the provided image, extract the MAC Address, GPON-SN, and D-SN. Return the result as a JSON object with keys 'macAddress', 'gponSn', and 'dSn'. If a value is not found, return an empty string for that key.`
-        };
-
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
-            contents: { parts: [imagePart, textPart] },
-        });
-
-        const jsonString = response.text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedData = JSON.parse(jsonString);
-        
-        const hasData = (parsedData.macAddress && parsedData.macAddress.length > 0) ||
-                        (parsedData.gponSn && parsedData.gponSn.length > 0) ||
-                        (parsedData.dSn && parsedData.dSn.length > 0);
-
-        setFormData(prev => ({
-            ...prev,
-            macAddress: formatMacAddress(parsedData.macAddress) || prev.macAddress,
-            gponSn: parsedData.gponSn || prev.gponSn,
-            dSn: parsedData.dSn || prev.dSn,
-        }));
-
-        if (hasData) {
-            showToast('تم استخراج البيانات بنجاح!', 'success');
-            setIsCameraViewOpen(false);
-        }
-    } catch (error) {
-        console.error("Error processing image with Gemini:", error);
-        showToast('فشل في معالجة الصورة. تحقق من مفتاح API.', 'error');
-    } finally {
-        setIsProcessing(false);
-    }
+    setIsScanModalOpen(false);
+    navigateTo(Page.CameraScan);
   };
 
+  const handleFileSelect = () => {
+    if (!apiKey) {
+      showToast('يجب عليك إضافة مفتاح API أولاً.', 'error');
+      setIsScanModalOpen(false);
+      return;
+    }
+    showToast('تحميل الملفات غير مدعوم حاليًا.', 'error');
+    setIsScanModalOpen(false);
+  };
+  
 
   return (
     <PageWrapper title={isEditMode ? "تعديل البيانات" : "إدخال بيانات"} onBack={onBack}>
-      <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-      <form className="max-w-2xl mx-auto space-y-6">
+      <form className="max-w-2xl mx-auto space-y-6 pb-20">
         {/* Client Info Section */}
         <div className="bg-white p-6 rounded-xl shadow-md">
           <div className="text-center mb-6">
@@ -285,28 +233,27 @@ const NewDataPage: React.FC<NewDataPageProps> = ({ onBack, onSave, onUpdate, rec
 
         {/* Equipment Info Section */}
         <div className="bg-white p-6 rounded-xl shadow-md">
-           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold" style={{ color: '#3A5DAE' }}>
-              معلومات المعدات
-            </h2>
-            <div
-              className="mt-2 h-0.5 w-24 mx-auto"
-              style={{ backgroundColor: '#BDD1F8' }}
-            ></div>
+          <div className="flex justify-between items-center mb-6">
+            <div className="text-right">
+              <h2 className="text-2xl font-bold" style={{ color: '#3A5DAE' }}>
+                معلومات المعدات
+              </h2>
+              <div
+                className="mt-2 h-0.5 w-24"
+                style={{ backgroundColor: '#BDD1F8' }}
+              ></div>
+            </div>
+            {!isEditMode && (
+              <button
+                type="button"
+                onClick={() => setIsScanModalOpen(true)}
+                className="p-3 bg-blue-100 text-blue-600 rounded-full shadow-sm hover:bg-blue-200 transition-all duration-300 transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                aria-label="فحص بيانات المعدات"
+              >
+                <CameraIcon className="w-6 h-6" />
+              </button>
+            )}
           </div>
-
-          <div className="flex flex-col items-center mb-8">
-            <button
-              type="button"
-              onClick={handleScanClick}
-              disabled={isProcessing}
-              className="flex flex-col items-center justify-center w-full h-48 rounded-2xl border-4 border-dashed border-gray-300 text-gray-400 hover:border-blue-500 hover:text-blue-500 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-200 disabled:border-gray-200 disabled:text-gray-300 disabled:cursor-not-allowed"
-            >
-              <ViewfinderIcon className="w-20 h-20 mb-2" />
-              <span className="font-bold text-xl">SCAN</span>
-            </button>
-          </div>
-          
           <div className="space-y-4">
             <InputField id="macAddress" label="MAC Address" isRtl={false} value={formData.macAddress} onChange={handleChange} />
             <InputField id="gponSn" label="GPON-SN" isRtl={false} value={formData.gponSn} onChange={handleChange} />
@@ -316,10 +263,14 @@ const NewDataPage: React.FC<NewDataPageProps> = ({ onBack, onSave, onUpdate, rec
         
         {/* Installation Info Section */}
         <div className="bg-white p-6 rounded-xl shadow-md">
-           <div className="text-right mb-4">
-            <h2 className="text-xl font-bold text-blue-700">
-              معلومات التثبيت
+           <div className="text-center mb-6">
+             <h2 className="text-2xl font-bold" style={{ color: '#3A5DAE' }}>
+                معلومات التثبيت
             </h2>
+             <div
+              className="mt-2 h-0.5 w-24 mx-auto"
+              style={{ backgroundColor: '#BDD1F8' }}
+            ></div>
           </div>
             <div className="space-y-4">
                 <InputField 
@@ -396,25 +347,13 @@ const NewDataPage: React.FC<NewDataPageProps> = ({ onBack, onSave, onUpdate, rec
             )}
         </div>
       </form>
-        <ScanOptionsModal 
-            isOpen={isScanModalOpen}
-            onClose={() => setIsScanModalOpen(false)}
-            onFileSelect={handleFileSelect}
-            onCameraSelect={handleCameraSelect}
-        />
-        {isCameraViewOpen && (
-            <CameraScan 
-                onBack={() => setIsCameraViewOpen(false)}
-                onCapture={handleCapture}
-                isProcessing={isProcessing}
-            />
-        )}
-        {isProcessing && (
-            <div className="fixed inset-0 bg-gray-900 bg-opacity-50 z-[101] flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
-                <p className="text-white text-xl mt-4">جاري المعالجة...</p>
-            </div>
-        )}
+      
+       <ScanOptionsModal
+        isOpen={isScanModalOpen}
+        onClose={() => setIsScanModalOpen(false)}
+        onCameraSelect={handleCameraSelect}
+        onFileSelect={handleFileSelect}
+      />
     </PageWrapper>
   );
 };

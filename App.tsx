@@ -6,6 +6,7 @@ import NewDataPage from './components/NewDataPage';
 import DatabasePage from './components/DatabasePage';
 import SettingsPage from './components/SettingsPage';
 import Toast from './components/Toast';
+import CameraScan from './components/CameraScan';
 
 // For storing editing state
 interface EditState {
@@ -24,6 +25,9 @@ const App: React.FC = () => {
   const [records, setRecords] = useState<FormData[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<EditState | null>(null);
   const [toastMessage, setToastMessage] = useState<ToastState | null>(null);
+  const [scannedData, setScannedData] = useState<Partial<FormData> | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
+
 
   useEffect(() => {
     // Show splash screen for a minimum duration
@@ -37,8 +41,12 @@ const App: React.FC = () => {
       if (savedRecords) {
         setRecords(JSON.parse(savedRecords));
       }
+      const savedApiKey = localStorage.getItem('geminiApiKey');
+      if (savedApiKey) {
+        setApiKey(savedApiKey);
+      }
     } catch (error) {
-      console.error("Failed to load records from localStorage", error);
+      console.error("Failed to load data from localStorage", error);
     }
 
     return () => clearTimeout(timer);
@@ -59,8 +67,24 @@ const App: React.FC = () => {
       setToastMessage(null);
     }, 3000); // Hide after 3 seconds
   };
+  
+  const saveApiKey = (key: string) => {
+    localStorage.setItem('geminiApiKey', key);
+    setApiKey(key);
+    showToast('تم حفظ مفتاح API بنجاح!', 'success');
+  };
+
+  const clearApiKey = () => {
+    localStorage.removeItem('geminiApiKey');
+    setApiKey('');
+    showToast('تم مسح مفتاح API.', 'success');
+  };
 
   const navigateTo = (page: Page) => {
+    // When navigating to NewData from anywhere else but the database "edit" button, clear the edit state.
+    if (page === Page.NewData && currentPage !== Page.Database && currentPage !== Page.CameraScan) {
+        setRecordToEdit(null);
+    }
     setCurrentPage(page);
   };
   
@@ -135,6 +159,11 @@ const App: React.FC = () => {
     showToast('تم مسح جميع البيانات بنجاح!', 'success');
   };
 
+  const handleScanSuccess = (data: Partial<FormData>) => {
+    setScannedData(data);
+    navigateTo(Page.NewData);
+  };
+
 
   const renderPage = () => {
     switch (currentPage) {
@@ -146,6 +175,10 @@ const App: React.FC = () => {
             onUpdate={handleUpdateRecord}
             recordToEdit={recordToEdit}
             showToast={showToast}
+            navigateTo={navigateTo}
+            scannedData={scannedData}
+            clearScannedData={() => setScannedData(null)}
+            apiKey={apiKey}
           />
         );
       case Page.Database:
@@ -164,13 +197,22 @@ const App: React.FC = () => {
           onRestore={handleRestoreData}
           onClearAll={handleClearAllData}
           showToast={showToast}
+          apiKey={apiKey}
+          onSaveApiKey={saveApiKey}
+          onClearApiKey={clearApiKey}
+        />;
+      case Page.CameraScan:
+        return <CameraScan
+          onBack={() => navigateTo(Page.NewData)}
+          onScanSuccess={handleScanSuccess}
+          showToast={showToast}
         />;
       case Page.Home:
       default:
         return <HomePage navigateTo={navigateTo} />;
     }
   };
-
+  
   return (
     <div className="relative min-h-screen bg-gray-50">
       {/* Splash Screen Layer */}

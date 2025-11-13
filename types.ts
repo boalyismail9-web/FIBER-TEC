@@ -3,6 +3,7 @@ export enum Page {
   NewData = 'NEW_DATA',
   Database = 'DATABASE',
   Settings = 'SETTINGS',
+  CameraScan = 'CAMERA_SCAN',
 }
 
 export interface FormData {
