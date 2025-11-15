@@ -7,7 +7,6 @@ import DatabasePage from './components/DatabasePage';
 import SettingsPage from './components/SettingsPage';
 import Toast from './components/Toast';
 import CameraScan from './components/CameraScan';
-import LoginPage from './components/LoginPage';
 import BottomNavBar from './components/BottomNavBar';
 
 // For storing editing state
@@ -23,7 +22,6 @@ interface ToastState {
 
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentPage, setCurrentPage] = useState<Page>(Page.Home);
   const [records, setRecords] = useState<FormData[]>([]);
   const [recordToEdit, setRecordToEdit] = useState<EditState | null>(null);
@@ -167,10 +165,6 @@ const App: React.FC = () => {
     navigateTo(Page.NewData);
   };
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
-
   const pagesWithNavBar = [Page.Home, Page.Database, Page.Settings];
 
   const renderPage = () => {
@@ -222,9 +216,6 @@ const App: React.FC = () => {
   };
   
   const renderContent = () => {
-    if (!isAuthenticated) {
-      return <LoginPage onLogin={handleLogin} />;
-    }
     return (
       <>
         {renderPage()}
