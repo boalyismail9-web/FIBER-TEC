@@ -128,6 +128,8 @@ const NewDataPage: React.FC<NewDataPageProps> = ({
 }) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEditMode = recordToEdit !== null;
 
   useEffect(() => {
@@ -200,18 +202,84 @@ const NewDataPage: React.FC<NewDataPageProps> = ({
   };
 
   const handleFileSelect = () => {
+    if (isProcessing) return;
     if (!apiKey) {
       showToast('يجب عليك إضافة مفتاح API أولاً.', 'error');
-      setIsScanModalOpen(false);
+      // ScanOptionsModal will call onClose, so we don't need to close it here.
       return;
     }
-    showToast('تحميل الملفات غير مدعوم حاليًا.', 'error');
-    setIsScanModalOpen(false);
+    fileInputRef.current?.click();
   };
   
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    
+    // Reset file input to allow selecting the same file again
+    if (event.target) {
+        event.target.value = '';
+    }
+
+    if (isProcessing || !file) return;
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        showToast('يرجى تحديد ملف صورة (JPEG, PNG, WEBP).', 'error');
+        return;
+    }
+
+    setIsProcessing(true);
+    showToast('جاري معالجة الصورة...', 'success');
+
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+        try {
+            const base64Image = (reader.result as string).split(',')[1];
+            
+            const response = await fetch('/api/process-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: base64Image, apiKey: apiKey }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'فشل الاتصال بالخادم');
+            }
+
+            const extractedData = await response.json();
+            
+            setFormData(prev => ({
+                ...prev,
+                macAddress: formatMacAddress(extractedData.macAddress || prev.macAddress),
+                gponSn: extractedData.gponSn || prev.gponSn,
+                dSn: extractedData.dSn || prev.dSn,
+            }));
+            showToast('تم تحديث البيانات الممسوحة ضوئيًا!', 'success');
+            
+        } catch (error) {
+            console.error('Error processing image:', error);
+            const errorMessage = (error as Error).message || 'فشل في معالجة الصورة. تأكد من صحة مفتاح API.';
+            showToast(errorMessage, 'error');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+    reader.onerror = (error) => {
+        console.error('Error reading file:', error);
+        showToast('فشل في قراءة الملف.', 'error');
+        setIsProcessing(false);
+    };
+  };
 
   return (
     <PageWrapper title={isEditMode ? "تعديل البيانات" : "إدخال بيانات"} onBack={onBack}>
+       <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        className="hidden"
+        accept="image/png, image/jpeg, image/webp"
+      />
       <form className="max-w-2xl mx-auto space-y-6 pb-20">
         {/* Client Info Section */}
         <div className="bg-white p-6 rounded-xl shadow-md">
