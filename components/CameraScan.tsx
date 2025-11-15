@@ -85,7 +85,7 @@ const CameraScan: React.FC<CameraScanProps> = ({ onBack, onScanSuccess, showToas
     const base64Image = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
     
     try {
-       const response = await fetch('/api/process-image', {
+       const response = await fetch('/.netlify/functions/process-image', {
          method: 'POST',
          headers: {
            'Content-Type': 'application/json',
@@ -94,8 +94,14 @@ const CameraScan: React.FC<CameraScanProps> = ({ onBack, onScanSuccess, showToas
        });
        
        if (!response.ok) {
-           const errorData = await response.json();
-           throw new Error(errorData.error || 'فشل الاتصال بالخادم');
+           let errorMsg = 'فشل الاتصال بالخادم';
+           try {
+               const errorData = await response.json();
+               errorMsg = errorData.error || `خطأ من الخادم: ${response.status}`;
+           } catch (e) {
+               errorMsg = `حدث خطأ غير متوقع. (رمز الحالة: ${response.status})`;
+           }
+           throw new Error(errorMsg);
        }
 
        const extractedData = await response.json();
@@ -103,7 +109,8 @@ const CameraScan: React.FC<CameraScanProps> = ({ onBack, onScanSuccess, showToas
 
     } catch (error) {
         console.error('Error processing image via Netlify function:', error);
-        showToast('فشل في معالجة الصورة. تأكد من صحة مفتاح API.', 'error');
+        const errorMessage = (error as Error).message || 'فشل في معالجة الصورة. تأكد من صحة مفتاح API.';
+        showToast(errorMessage, 'error');
     } finally {
         setIsProcessing(false);
     }

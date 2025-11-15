@@ -235,15 +235,21 @@ const NewDataPage: React.FC<NewDataPageProps> = ({
         try {
             const base64Image = (reader.result as string).split(',')[1];
             
-            const response = await fetch('/api/process-image', {
+            const response = await fetch('/.netlify/functions/process-image', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: base64Image, apiKey: apiKey }),
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'فشل الاتصال بالخادم');
+                let errorMsg = 'فشل الاتصال بالخادم';
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.error || `خطأ من الخادم: ${response.status}`;
+                } catch (e) {
+                    errorMsg = `حدث خطأ غير متوقع. (رمز الحالة: ${response.status})`;
+                }
+                throw new Error(errorMsg);
             }
 
             const extractedData = await response.json();

@@ -20,7 +20,7 @@ const PageWrapper: React.FC<PageWrapperProps> = ({ title, onBack, children }) =>
           <ArrowLeftIcon className="w-6 h-6" />
         </button>
       </header>
-      <main className="p-4 sm:p-6 md:p-8">{children}</main>
+      <main className="p-4 pb-24 sm:p-6 sm:pb-24 md:p-8 md:pb-24">{children}</main>
     </div>
   );
 };
