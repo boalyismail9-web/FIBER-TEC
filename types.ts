@@ -20,4 +20,5 @@ export interface FormData {
   equipmentType: string;
   landline: string;
   interventionType: string;
+  dateAdded: string;
 }

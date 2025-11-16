@@ -20,6 +20,14 @@ interface ToastState {
   type: 'success' | 'error';
 }
 
+export interface ConsumptionLogEntry {
+  date: string;
+  clientName: string;
+  sip: string;
+  cableConsumed: number;
+  routerConsumed: number;
+}
+
 const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<Page>(Page.Home);
@@ -93,16 +101,84 @@ const App: React.FC = () => {
     setCurrentPage(Page.Home);
   };
 
-  const handleSaveRecord = (newRecord: FormData): boolean => {
+  const handleSaveRecord = (newRecordData: FormData): boolean => {
     const isDuplicate = records.some(
-      (record) => record.sip.trim() === newRecord.sip.trim() && record.sip.trim() !== ''
+      (record) => record.sip.trim() === newRecordData.sip.trim() && record.sip.trim() !== ''
     );
     if (isDuplicate) {
       showToast('رقم SIP هذا موجود بالفعل!', 'error');
       return false;
     }
+
+    const newRecord: FormData = {
+        ...newRecordData,
+        dateAdded: new Date().toISOString(),
+    };
+
+    // --- Update Inventory Logic ---
+    if (newRecord.interventionType === 'INSTALLATION' || newRecord.interventionType === 'INSTALLATION EXISTANT') {
+        try {
+            const routerStorageKey = 'routerInventory';
+            const savedRouterData = localStorage.getItem(routerStorageKey);
+            if (savedRouterData) {
+                const inventory = JSON.parse(savedRouterData);
+                if (typeof inventory.current === 'number') {
+                    inventory.current -= 1;
+                    localStorage.setItem(routerStorageKey, JSON.stringify(inventory));
+                }
+            }
+        } catch (error) {
+            console.error('Failed to update router inventory:', error);
+            showToast('فشل تحديث مخزون الروتر.', 'error');
+        }
+    }
+
+    const cableUsed = Number(newRecord.cableLength);
+    if (!isNaN(cableUsed) && cableUsed > 0) {
+        try {
+            const cableStorageKey = 'cableInventory';
+            const savedCableData = localStorage.getItem(cableStorageKey);
+            if (savedCableData) {
+                const inventory = JSON.parse(savedCableData);
+                if (typeof inventory.current === 'number') {
+                    inventory.current -= cableUsed;
+                    localStorage.setItem(cableStorageKey, JSON.stringify(inventory));
+                }
+            }
+        } catch (error) {
+            console.error('Failed to update cable inventory:', error);
+            showToast('فشل تحديث مخزون الكابل.', 'error');
+        }
+    }
+    
+    // --- Update Consumption Log ---
+    try {
+        const consumptionLogKey = 'consumptionLog';
+        const savedLog = localStorage.getItem(consumptionLogKey);
+        const log: ConsumptionLogEntry[] = savedLog ? JSON.parse(savedLog) : [];
+
+        const routerConsumed = (newRecord.interventionType === 'INSTALLATION' || newRecord.interventionType === 'INSTALLATION EXISTANT') ? 1 : 0;
+        const cableConsumed = Number(newRecord.cableLength) || 0;
+
+        // Only log if something was actually consumed
+        if (routerConsumed > 0 || cableConsumed > 0) {
+            log.unshift({ // Add to the beginning of the array for chronological order
+                date: newRecord.dateAdded,
+                clientName: newRecord.clientName,
+                sip: newRecord.sip,
+                cableConsumed,
+                routerConsumed,
+            });
+            localStorage.setItem(consumptionLogKey, JSON.stringify(log));
+        }
+
+    } catch (error) {
+        console.error('Failed to update consumption log:', error);
+        showToast('فشل في تحديث سجل الاستهلاك.', 'error');
+    }
+
     setRecords(prevRecords => [...prevRecords, newRecord]);
-    showToast('تم حفظ البيانات بنجاح!', 'success');
+    showToast('تم الحفظ وتحديث المخزون!', 'success');
     return true;
   };
 
@@ -157,6 +233,8 @@ const App: React.FC = () => {
 
   const handleClearAllData = () => {
     setRecords([]);
+    // Optionally clear consumption log as well
+    localStorage.removeItem('consumptionLog');
     showToast('تم مسح جميع البيانات بنجاح!', 'success');
   };
 

@@ -103,6 +103,7 @@ const initialFormData: FormData = {
     equipmentType: 'F6600',
     landline: '0',
     interventionType: 'Déménagement',
+    dateAdded: '',
   };
 
 const formatMacAddress = (mac: string): string => {

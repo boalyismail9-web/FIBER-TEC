@@ -2,28 +2,15 @@ import React, { useState, useEffect } from 'react';
 import PageWrapper from './PageWrapper';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 import ShareIcon from './icons/ShareIcon';
+import ArchiveBoxIcon from './icons/ArchiveBoxIcon';
 
-// This data was in WeeklyConsumptionPage
-interface ConsumptionRecord {
-  day: string;
+interface ConsumptionLogEntry {
   date: string;
+  clientName: string;
   sip: string;
-  cableLength: string;
+  cableConsumed: number;
+  routerConsumed: number;
 }
-const consumptionData: ConsumptionRecord[] = [
-  { day: 'الاثنين', date: '2025/11/10', sip: '0521221055', cableLength: '20M' },
-  { day: 'الاثنين', date: '2025/11/10', sip: '0521215516', cableLength: '17M' },
-  { day: 'الاثنين', date: '2025/11/10', sip: '0521222478', cableLength: '00M' },
-  { day: 'الاثنين', date: '2025/11/10', sip: '0521214158', cableLength: '19M' },
-  { day: 'الثلاثاء', date: '2025/11/11', sip: '0521220900', cableLength: '28M' },
-  { day: 'الخميس', date: '2025/11/13', sip: '0521231091', cableLength: '00M' },
-  { day: 'الخميس', date: '2025/11/13', sip: '0521228270', cableLength: '19M' },
-  { day: 'الخميس', date: '2025/11/13', sip: '0521229760', cableLength: '18M' },
-  { day: 'الجمعة', date: '2025/11/14', sip: '0521230246', cableLength: '18M' },
-  { day: 'الجمعة', date: '2025/11/14', sip: '0521230252', cableLength: '25M' },
-  { day: 'الجمعة', date: '2025/11/14', sip: '0521230245', cableLength: '18M' },
-  { day: 'الجمعة', date: '2025/11/14', sip: '0521230243', cableLength: '20M' },
-];
 
 interface EtatMaterielItem {
     designation: string;
@@ -70,6 +57,9 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
     const etatStorageKey = 'etatMaterielState';
     const [etatState, setEtatState] = useState<EtatMaterielState>(initialEtatState);
 
+    // --- State and Logic for Reports ---
+    const [consumptionLog, setConsumptionLog] = useState<ConsumptionLogEntry[]>([]);
+
     useEffect(() => {
         try {
             const savedRouterData = localStorage.getItem(routerStorageKey);
@@ -103,7 +93,34 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
             }
         } catch (error) { console.error('Failed to load ETAT MATERIEL data from localStorage', error); }
 
+        try {
+            const savedLog = localStorage.getItem('consumptionLog');
+            if (savedLog) {
+                setConsumptionLog(JSON.parse(savedLog));
+            }
+        } catch (error) { console.error('Failed to load consumption log', error); }
+
     }, []);
+
+    useEffect(() => {
+        // Link inventory data to ETAT MATÉRIEL table
+        setEtatState(prevState => {
+            const newItems = prevState.items.map(item => {
+                if (item.designation === 'Routeur Complet 6600') {
+                    return { ...item, quantite: currentQuantity };
+                }
+                if (item.designation === 'Câble Outdoor') {
+                    return { ...item, quantite: currentCableLength };
+                }
+                return item;
+            });
+
+            return {
+                ...prevState,
+                items: newItems
+            };
+        });
+    }, [currentQuantity, currentCableLength]);
 
     const handleRouterSave = () => {
         try {
@@ -168,15 +185,12 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
             
             const itemLines = etatState.items.map(item => `*${item.designation}: ${item.quantite}${item.unit || ''}*`);
             
-            // Recreate the specific spacing from the user's request
             if(itemLines.length > 0) shareText += `${itemLines[0]}\n`;
             if(itemLines.length > 1) shareText += `${itemLines[1]}\n\n`;
             if(itemLines.length > 2) shareText += `${itemLines[2]}\n`;
             if(itemLines.length > 3) shareText += `${itemLines[3]}\n\n`;
             if(itemLines.length > 4) shareText += `${itemLines[4]}`;
 
-
-    
             if (navigator.share) {
                 await navigator.share({
                     title: `ETAT MATÉRIEL: ${etatState.technicianName}`,
@@ -215,7 +229,13 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
             <div className="bg-white p-4 rounded-xl shadow-md w-full">
                 <h2 className="text-xl font-bold text-gray-800 mb-3 text-right">المخزون الروتر</h2>
                 <div className="border-t border-gray-100 pt-4">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">الكمية والسعة</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">الكمية والسعة</h3>
+                    <div className="text-center my-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <span className="text-sm font-medium text-gray-600">السعة القصوى / الكمية الحالية</span>
+                        <p className="text-3xl font-bold text-blue-700 tracking-wider mt-1">
+                            {Number(maxCapacity) || 0} / {Number(currentQuantity) || 0}
+                        </p>
+                    </div>
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="current-quantity" className="block text-right text-xs font-medium text-gray-600 mb-1">الكمية الحالية</label>
@@ -236,7 +256,13 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
             <div className="bg-white p-4 rounded-xl shadow-md w-full">
                 <h2 className="text-xl font-bold text-gray-800 mb-3 text-right">ميتراج الكابل (بالمتر)</h2>
                 <div className="border-t border-gray-100 pt-4">
-                    <h3 className="text-lg font-semibold text-gray-700 mb-4 text-center">الكمية بالمتر</h3>
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2 text-center">الكمية بالمتر</h3>
+                     <div className="text-center my-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <span className="text-sm font-medium text-gray-600">الكمية الإجمالية / الحالية (متر)</span>
+                        <p className="text-3xl font-bold text-green-700 tracking-wider mt-1">
+                            {Number(totalCableLength) || 0} / {Number(currentCableLength) || 0}
+                        </p>
+                    </div>
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="current-cable-length" className="block text-right text-xs font-medium text-gray-600 mb-1">الكمية الحالية</label>
@@ -256,38 +282,6 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
         </div>
     );
     
-    const renderConsumptionContent = () => (
-        <div className="max-w-lg mx-auto animate-fade-in">
-            <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-xl font-bold text-gray-800 text-center">جدول استهلاك الأسبوع</h2>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-right">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">اليوم</th>
-                                <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">التاريخ</th>
-                                <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">رقم SIP</th>
-                                <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">مطراح الكابل</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200">
-                            {consumptionData.map((record, index) => (
-                                <tr key={index} className="hover:bg-gray-50">
-                                    <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800">{record.day}</td>
-                                    <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-500">{record.date}</td>
-                                    <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-500 font-mono">{record.sip}</td>
-                                    <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800 font-semibold">{record.cableLength}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    );
-
     const renderEtatMaterielContent = () => (
         <div className="max-w-lg mx-auto animate-fade-in">
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
@@ -351,18 +345,89 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
         </div>
     );
 
-    const renderReportsContent = () => (
-        <div className="max-w-lg mx-auto animate-fade-in">
-            <div className="bg-white rounded-xl shadow-md overflow-hidden p-8 text-center">
-                <h2 className="text-2xl font-bold text-gray-800 mb-4">التقارير والسجلات</h2>
-                <p className="text-gray-600">
-                    هذا القسم مخصص لعرض التقارير التفصيلية وسجلات الأنشطة.
-                    <br />
-                    <span className="font-semibold text-blue-600">قيد الإنشاء حاليًا.</span>
-                </p>
+    const renderReportsContent = () => {
+        // Helper function to get the start of the week (assuming Monday is the first day)
+        const getWeekStart = (date: Date): Date => {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const startOfWeek = new Date(d.setDate(diff));
+            startOfWeek.setHours(0, 0, 0, 0);
+            return startOfWeek;
+        };
+
+        const startOfWeek = getWeekStart(new Date());
+
+        const weeklyLog = consumptionLog.filter(entry => new Date(entry.date) >= startOfWeek);
+        
+        const totalRoutersThisWeek = weeklyLog.reduce((sum, entry) => sum + entry.routerConsumed, 0);
+        const totalCableThisWeek = weeklyLog.reduce((sum, entry) => sum + entry.cableConsumed, 0);
+
+        const ReportCard: React.FC<{title: string, value: string, icon: React.ReactNode}> = ({title, value, icon}) => (
+            <div className="bg-white p-4 rounded-xl shadow-md flex items-center gap-4">
+                <div className="bg-blue-100 text-blue-600 p-3 rounded-full">{icon}</div>
+                <div>
+                    <p className="text-gray-500 text-sm font-medium">{title}</p>
+                    <p className="text-2xl font-bold text-gray-800">{value}</p>
+                </div>
             </div>
-        </div>
-    );
+        );
+
+        return (
+            <div className="max-w-4xl mx-auto animate-fade-in space-y-6">
+                <div>
+                    <h2 className="text-xl font-bold text-gray-800 mb-3 text-right">ملخص الأسبوع الحالي</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <ReportCard 
+                            title="الروترات المستخدمة" 
+                            value={String(totalRoutersThisWeek)} 
+                            icon={<ArchiveBoxIcon className="w-6 h-6"/>}
+                        />
+                         <ReportCard 
+                            title="الكابل المستخدم (متر)" 
+                            value={String(totalCableThisWeek)}
+                            icon={<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6"><path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.998 15.998 0 011.622-3.385m5.043.025a15.998 15.998 0 001.622-3.385m3.388 1.62a15.998 15.998 0 00-1.62-3.385m-5.044-.025a15.998 15.998 0 01-3.388-1.621m7.5 4.242a3 3 0 00-5.78 1.128 2.25 2.25 0 01-2.4 2.245 4.5 4.5 0 008.4-2.245c0-.399-.078-.78-.22-1.128zm0 0a15.998 15.998 0 003.388-1.62m-5.043-.025a15.998 15.998 0 011.622-3.385" /></svg>}
+                        />
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="p-4 border-b border-gray-200">
+                        <h2 className="text-xl font-bold text-gray-800 text-center">سجل الأنشطة الأخير</h2>
+                    </div>
+                    {consumptionLog.length > 0 ? (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-right">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">التاريخ</th>
+                                        <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">العميل</th>
+                                        <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600 hidden sm:table-cell">SIP</th>
+                                        <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600 text-center">المواد</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    {consumptionLog.map((log, index) => (
+                                        <tr key={index} className="hover:bg-gray-50">
+                                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-500">{new Date(log.date).toLocaleDateString('ar-EG')}</td>
+                                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800 font-medium">{log.clientName}</td>
+                                            <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-500 font-mono hidden sm:table-cell">{log.sip}</td>
+                                            <td className="py-3 px-4 whitespace-nowrap text-sm text-center">
+                                                {log.routerConsumed > 0 && <span className="inline-block bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full">روتر: {log.routerConsumed}</span>}
+                                                {log.cableConsumed > 0 && <span className="inline-block bg-green-100 text-green-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full">كابل: {log.cableConsumed}م</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                         <p className="text-center text-gray-500 py-10 px-4">لا توجد سجلات استهلاك حتى الآن. أضف سجل عميل جديد لتظهر البيانات هنا.</p>
+                    )}
+                </div>
+            </div>
+        )
+    };
 
     return (
         <PageWrapper title="المخزون والاستهلاك" onBack={onBack}>
@@ -370,11 +435,9 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
                 <TabButton label="ETAT MATÉRIEL" isActive={activeTab === 'etat_materiel'} onClick={() => setActiveTab('etat_materiel')} />
                 <TabButton label="إدارة المخزون" isActive={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} />
                 <TabButton label="التقارير والسجلات" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
-                <TabButton label="الاستهلاك الأسبوعي" isActive={activeTab === 'consumption'} onClick={() => setActiveTab('consumption')} />
             </div>
             {activeTab === 'etat_materiel' && renderEtatMaterielContent()}
             {activeTab === 'inventory' && renderInventoryContent()}
-            {activeTab === 'consumption' && renderConsumptionContent()}
             {activeTab === 'reports' && renderReportsContent()}
         </PageWrapper>
     );
