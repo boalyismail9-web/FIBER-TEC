@@ -10,15 +10,13 @@ interface InventoryPageProps {
 const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
     // --- Router Inventory State and Logic ---
     const routerStorageKey = 'routerInventory';
-    const initialRouterData = { current: 30, max: 38 };
-    const [currentQuantity, setCurrentQuantity] = useState(initialRouterData.current);
-    const [maxCapacity, setMaxCapacity] = useState(initialRouterData.max);
+    const [currentQuantity, setCurrentQuantity] = useState('');
+    const [maxCapacity, setMaxCapacity] = useState('');
     
     // --- Cable Inventory State and Logic ---
     const cableStorageKey = 'cableInventory';
-    const initialCableData = { current: 500, total: 500 };
-    const [currentCableLength, setCurrentCableLength] = useState(initialCableData.current);
-    const [totalCableLength, setTotalCableLength] = useState(initialCableData.total);
+    const [currentCableLength, setCurrentCableLength] = useState('');
+    const [totalCableLength, setTotalCableLength] = useState('');
 
     useEffect(() => {
         // Load router data
@@ -27,8 +25,8 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
             if (savedRouterData) {
                 const { current, max } = JSON.parse(savedRouterData);
                 if (typeof current === 'number' && typeof max === 'number') {
-                    setCurrentQuantity(current);
-                    setMaxCapacity(max);
+                    setCurrentQuantity(String(current));
+                    setMaxCapacity(String(max));
                 }
             }
         } catch (error) {
@@ -41,8 +39,8 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
             if (savedCableData) {
                 const { current, total } = JSON.parse(savedCableData);
                  if (typeof current === 'number' && typeof total === 'number') {
-                    setCurrentCableLength(current);
-                    setTotalCableLength(total);
+                    setCurrentCableLength(String(current));
+                    setTotalCableLength(String(total));
                 }
             }
         } catch (error) {
@@ -52,7 +50,7 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
 
     const handleRouterSave = () => {
         try {
-            localStorage.setItem(routerStorageKey, JSON.stringify({ current: currentQuantity, max: maxCapacity }));
+            localStorage.setItem(routerStorageKey, JSON.stringify({ current: Number(currentQuantity) || 0, max: Number(maxCapacity) || 0 }));
             showToast('تم حفظ مخزون الروتر!', 'success');
         } catch (error) {
             console.error('Failed to save router inventory data to localStorage', error);
@@ -61,14 +59,14 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
     };
 
     const handleRouterReset = () => {
-        setCurrentQuantity(0);
-        setMaxCapacity(0);
-        showToast('تمت إعادة تعيين قيم الروتر إلى الصفر.', 'success');
+        setCurrentQuantity('');
+        setMaxCapacity('');
+        showToast('تم مسح حقول الروتر.', 'success');
     };
 
     const handleCableSave = () => {
         try {
-            localStorage.setItem(cableStorageKey, JSON.stringify({ current: currentCableLength, total: totalCableLength }));
+            localStorage.setItem(cableStorageKey, JSON.stringify({ current: Number(currentCableLength) || 0, total: Number(totalCableLength) || 0 }));
             showToast('تم حفظ بيانات الكابل!', 'success');
         } catch (error) {
             console.error('Failed to save cable inventory data to localStorage', error);
@@ -77,9 +75,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
     };
 
     const handleCableReset = () => {
-        setCurrentCableLength(0);
-        setTotalCableLength(0);
-        showToast('تمت إعادة تعيين قيم الكابل إلى الصفر.', 'success');
+        setCurrentCableLength('');
+        setTotalCableLength('');
+        showToast('تم مسح حقول الكابل.', 'success');
     };
 
   return (
@@ -101,8 +99,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
                             type="number"
                             id="current-quantity"
                             value={currentQuantity}
-                            onChange={(e) => setCurrentQuantity(Number(e.target.value))}
+                            onChange={(e) => setCurrentQuantity(e.target.value)}
                             className="block w-full border border-gray-200 bg-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-base text-center p-2 transition"
+                            placeholder="أدخل الكمية"
                         />
                     </div>
                     <div>
@@ -113,8 +112,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
                             type="number"
                             id="max-capacity"
                             value={maxCapacity}
-                            onChange={(e) => setMaxCapacity(Number(e.target.value))}
+                            onChange={(e) => setMaxCapacity(e.target.value)}
                             className="block w-full border border-gray-200 bg-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-base text-center p-2 transition"
+                            placeholder="أدخل السعة"
                         />
                     </div>
                 </div>
@@ -153,8 +153,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
                             type="number"
                             id="current-cable-length"
                             value={currentCableLength}
-                            onChange={(e) => setCurrentCableLength(Number(e.target.value))}
+                            onChange={(e) => setCurrentCableLength(e.target.value)}
                             className="block w-full border border-gray-200 bg-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-base text-center p-2 transition"
+                            placeholder="أدخل الكمية الحالية"
                         />
                     </div>
                     <div>
@@ -165,8 +166,9 @@ const InventoryPage: React.FC<InventoryPageProps> = ({ onBack, showToast }) => {
                             type="number"
                             id="total-cable-length"
                             value={totalCableLength}
-                            onChange={(e) => setTotalCableLength(Number(e.target.value))}
+                            onChange={(e) => setTotalCableLength(e.target.value)}
                             className="block w-full border border-gray-200 bg-gray-50 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-base text-center p-2 transition"
+                            placeholder="أدخل الكمية الإجمالية"
                         />
                     </div>
                 </div>
