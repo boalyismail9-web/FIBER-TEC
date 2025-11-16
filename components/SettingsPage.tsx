@@ -9,7 +9,6 @@ import KeyIcon from './icons/KeyIcon';
 import CheckCircleIcon from './icons/CheckCircleIcon';
 
 interface SettingsPageProps {
-  onBack: () => void;
   records: FormData[];
   onRestore: (data: FormData[]) => void;
   onClearAll: () => void;
@@ -20,7 +19,6 @@ interface SettingsPageProps {
 }
 
 const SettingsPage: React.FC<SettingsPageProps> = ({ 
-    onBack, 
     records, 
     onRestore, 
     onClearAll, 
@@ -138,7 +136,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({
   };
 
   return (
-    <PageWrapper title="الإعدادات" onBack={onBack}>
+    <PageWrapper title="الإعدادات">
         <input
             type="file"
             accept=".json"

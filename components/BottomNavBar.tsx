@@ -8,6 +8,7 @@ import PlusIcon from './icons/PlusIcon';
 interface BottomNavBarProps {
   currentPage: Page;
   navigateTo: (page: Page) => void;
+  clearEditState: () => void;
 }
 
 const NavItem: React.FC<{
@@ -31,7 +32,7 @@ const NavItem: React.FC<{
   );
 };
 
-const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentPage, navigateTo }) => {
+const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentPage, navigateTo, clearEditState }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.05)] flex justify-around items-center border-t border-gray-200 z-20">
       <NavItem
@@ -50,7 +51,10 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentPage, navigateTo }) 
         icon={<PlusIcon className="w-6 h-6 mb-1" />}
         label="إضافة"
         isActive={currentPage === Page.NewData}
-        onClick={() => navigateTo(Page.NewData)}
+        onClick={() => {
+            clearEditState();
+            navigateTo(Page.NewData);
+        }}
       />
       <NavItem
         icon={<SettingsIcon className="w-6 h-6 mb-1" />}

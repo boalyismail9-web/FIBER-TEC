@@ -36,11 +36,10 @@ const initialEtatState: EtatMaterielState = {
 
 
 interface LogisticsPageProps {
-  onBack: () => void;
   showToast: (message: string, type: 'success' | 'error') => void;
 }
 
-const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
+const LogisticsPage: React.FC<LogisticsPageProps> = ({ showToast }) => {
     const [activeTab, setActiveTab] = useState('etat_materiel');
     const [isSharing, setIsSharing] = useState(false);
 
@@ -430,7 +429,7 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
     };
 
     return (
-        <PageWrapper title="المخزون والاستهلاك" onBack={onBack}>
+        <PageWrapper title="المخزون والاستهلاك">
             <div className="flex flex-row flex-wrap items-stretch justify-center gap-2 sm:gap-4 mb-8">
                 <TabButton label="ETAT MATÉRIEL" isActive={activeTab === 'etat_materiel'} onClick={() => setActiveTab('etat_materiel')} />
                 <TabButton label="إدارة المخزون" isActive={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} />

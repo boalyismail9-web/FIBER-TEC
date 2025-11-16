@@ -13,7 +13,6 @@ interface EditState {
 }
 
 interface NewDataPageProps {
-  onBack: () => void;
   onSave: (data: FormData) => boolean;
   onUpdate: (index: number, data: FormData) => void;
   recordToEdit: EditState | null;
@@ -78,6 +77,7 @@ const SelectField = ({ id, label, options, value, onChange }) => (
             >
                 {options.map((option) => (
                     <option key={option} value={option}>{option}</option>
+
                 ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-3 text-gray-700">
@@ -117,7 +117,6 @@ const formatMacAddress = (mac: string): string => {
 };
 
 const NewDataPage: React.FC<NewDataPageProps> = ({ 
-    onBack, 
     onSave, 
     onUpdate, 
     recordToEdit, 
@@ -279,7 +278,7 @@ const NewDataPage: React.FC<NewDataPageProps> = ({
   };
 
   return (
-    <PageWrapper title={isEditMode ? "تعديل البيانات" : "إدخال بيانات"} onBack={onBack}>
+    <PageWrapper title={isEditMode ? "تعديل البيانات" : "إدخال بيانات"}>
        <input
         type="file"
         ref={fileInputRef}

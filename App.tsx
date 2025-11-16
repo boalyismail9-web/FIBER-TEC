@@ -90,15 +90,11 @@ const App: React.FC = () => {
   };
 
   const navigateTo = (page: Page) => {
-    // When navigating to NewData from anywhere else but the database "edit" button, clear the edit state.
-    if (page === Page.NewData && currentPage !== Page.Home && currentPage !== Page.CameraScan) {
-        setRecordToEdit(null);
-    }
     setCurrentPage(page);
   };
   
-  const goHome = () => {
-    setCurrentPage(Page.Home);
+  const clearEditState = () => {
+    setRecordToEdit(null);
   };
 
   const handleSaveRecord = (newRecordData: FormData): boolean => {
@@ -213,15 +209,6 @@ const App: React.FC = () => {
     setRecords(prevRecords => prevRecords.filter((_, i) => i !== index));
   };
 
-  const handleBackFromForm = () => {
-    if (recordToEdit) {
-      setRecordToEdit(null);
-      navigateTo(Page.Home);
-    } else {
-      goHome();
-    }
-  };
-
   const handleRestoreData = (restoredRecords: FormData[]) => {
     if (Array.isArray(restoredRecords) && restoredRecords.every(r => typeof r === 'object' && r !== null && 'clientName' in r && 'sip' in r)) {
       setRecords(restoredRecords);
@@ -250,7 +237,6 @@ const App: React.FC = () => {
       case Page.NewData:
         return (
           <NewDataPage 
-            onBack={handleBackFromForm} 
             onSave={handleSaveRecord} 
             onUpdate={handleUpdateRecord}
             recordToEdit={recordToEdit}
@@ -262,10 +248,9 @@ const App: React.FC = () => {
           />
         );
       case Page.Logistics:
-        return <LogisticsPage onBack={goHome} showToast={showToast} />;
+        return <LogisticsPage showToast={showToast} />;
       case Page.Settings:
         return <SettingsPage 
-          onBack={goHome} 
           records={records}
           onRestore={handleRestoreData}
           onClearAll={handleClearAllData}
@@ -295,7 +280,11 @@ const App: React.FC = () => {
       <>
         {renderPage()}
         {pagesWithNavBar.includes(currentPage) && (
-          <BottomNavBar currentPage={currentPage} navigateTo={navigateTo} />
+          <BottomNavBar 
+            currentPage={currentPage} 
+            navigateTo={navigateTo} 
+            clearEditState={clearEditState}
+          />
         )}
       </>
     );
