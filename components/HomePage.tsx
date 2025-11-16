@@ -64,10 +64,15 @@ Téléphone fix : *${record.landline}*
 
   const filteredRecords = records
     .map((record, index) => ({ record, originalIndex: index }))
-    .filter(({ record }) =>
-      record.sip.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.clientName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    .filter(({ record }) => {
+        const term = searchTerm.toLowerCase().trim();
+        if (!term) return true;
+        return (
+            record.sip.toLowerCase().includes(term) ||
+            record.clientName.toLowerCase().includes(term) ||
+            record.cin.toLowerCase().includes(term)
+        );
+    });
 
   const handleDeleteRequest = (index: number) => {
     setModalState({ isOpen: true, index: index });
@@ -97,7 +102,7 @@ Téléphone fix : *${record.landline}*
             <div className="relative">
               <input
                 type="text"
-                placeholder="ابحث في السجلات..."
+                placeholder="ابحث بالاسم، SIP، أو CIN..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full py-3 pr-4 pl-10 text-lg bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
