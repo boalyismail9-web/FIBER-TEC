@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import PageWrapper from './PageWrapper';
 import CheckCircleIcon from './icons/CheckCircleIcon';
+import ShareIcon from './icons/ShareIcon';
 
 // This data was in WeeklyConsumptionPage
 interface ConsumptionRecord {
@@ -54,6 +55,7 @@ interface LogisticsPageProps {
 
 const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
     const [activeTab, setActiveTab] = useState('etat_materiel');
+    const [isSharing, setIsSharing] = useState(false);
 
     // --- State and Logic from InventoryPage ---
     const routerStorageKey = 'routerInventory';
@@ -152,6 +154,45 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
         } catch (error) {
             console.error('Failed to save ETAT MATERIEL data to localStorage', error);
             showToast('فشل حفظ بيانات ETAT MATÉRIEL.', 'error');
+        }
+    };
+
+    const handleEtatMaterielShare = async () => {
+        if (isSharing) return;
+    
+        setIsSharing(true);
+    
+        try {
+            let shareText = `*Bonsoir*\n\n`;
+            shareText += `*ETAT MATÉRIEL ${etatState.technicianName.toUpperCase()}*\n\n`;
+            
+            const itemLines = etatState.items.map(item => `*${item.designation}: ${item.quantite}${item.unit || ''}*`);
+            
+            // Recreate the specific spacing from the user's request
+            if(itemLines.length > 0) shareText += `${itemLines[0]}\n`;
+            if(itemLines.length > 1) shareText += `${itemLines[1]}\n\n`;
+            if(itemLines.length > 2) shareText += `${itemLines[2]}\n`;
+            if(itemLines.length > 3) shareText += `${itemLines[3]}\n\n`;
+            if(itemLines.length > 4) shareText += `${itemLines[4]}`;
+
+
+    
+            if (navigator.share) {
+                await navigator.share({
+                    title: `ETAT MATÉRIEL: ${etatState.technicianName}`,
+                    text: shareText,
+                });
+            } else {
+                navigator.clipboard.writeText(shareText);
+                showToast('تم نسخ البيانات إلى الحافظة.', 'success');
+            }
+        } catch (error) {
+            if ((error as Error).name !== 'AbortError') {
+                console.error('Error sharing data:', error);
+                showToast('حدث خطأ أثناء المشاركة.', 'error');
+            }
+        } finally {
+            setIsSharing(false);
         }
     };
     
@@ -291,8 +332,17 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
                         </tbody>
                     </table>
                 </div>
-                 <div className="p-4 bg-gray-50 flex justify-end">
-                     <button onClick={handleEtatMaterielSave} className="flex items-center justify-center gap-2 bg-[#3b82f6] text-white font-bold py-2 px-4 rounded-md text-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                 <div className="p-4 bg-gray-50 flex justify-end gap-3">
+                    <button 
+                        onClick={handleEtatMaterielShare} 
+                        disabled={isSharing} 
+                        className="flex items-center justify-center gap-2 bg-green-600 text-white font-bold py-2 px-4 rounded-md text-sm transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50 disabled:opacity-50"
+                        aria-label="مشاركة"
+                    >
+                        <span>مشاركة</span>
+                        <ShareIcon className="w-5 h-5" />
+                    </button>
+                    <button onClick={handleEtatMaterielSave} className="flex items-center justify-center gap-2 bg-[#3b82f6] text-white font-bold py-2 px-4 rounded-md text-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
                         <span>حفظ</span>
                         <CheckCircleIcon className="w-5 h-5" />
                     </button>
