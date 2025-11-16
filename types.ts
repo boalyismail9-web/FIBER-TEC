@@ -4,6 +4,7 @@ export enum Page {
   Settings = 'SETTINGS',
   CameraScan = 'CAMERA_SCAN',
   Inventory = 'INVENTORY',
+  WeeklyConsumption = 'WEEKLY_CONSUMPTION',
 }
 
 export interface FormData {

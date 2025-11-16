@@ -8,6 +8,7 @@ import Toast from './components/Toast';
 import CameraScan from './components/CameraScan';
 import BottomNavBar from './components/BottomNavBar';
 import InventoryPage from './components/InventoryPage';
+import WeeklyConsumptionPage from './components/WeeklyConsumptionPage';
 
 // For storing editing state
 interface EditState {
@@ -165,7 +166,7 @@ const App: React.FC = () => {
     navigateTo(Page.NewData);
   };
 
-  const pagesWithNavBar = [Page.Home, Page.Inventory, Page.NewData, Page.Settings];
+  const pagesWithNavBar = [Page.Home, Page.Inventory, Page.WeeklyConsumption, Page.NewData, Page.Settings];
 
   const renderPage = () => {
     switch (currentPage) {
@@ -185,6 +186,8 @@ const App: React.FC = () => {
         );
       case Page.Inventory:
         return <InventoryPage onBack={goHome} showToast={showToast} />;
+      case Page.WeeklyConsumption:
+        return <WeeklyConsumptionPage onBack={goHome} showToast={showToast} />;
       case Page.Settings:
         return <SettingsPage 
           onBack={goHome} 

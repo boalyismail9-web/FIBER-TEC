@@ -4,6 +4,7 @@ import HomeIcon from './icons/HomeIcon';
 import SettingsIcon from './icons/SettingsIcon';
 import ArchiveBoxIcon from './icons/ArchiveBoxIcon';
 import PlusIcon from './icons/PlusIcon';
+import CalendarDaysIcon from './icons/CalendarDaysIcon';
 
 interface BottomNavBarProps {
   currentPage: Page;
@@ -42,9 +43,15 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentPage, navigateTo }) 
       />
       <NavItem
         icon={<ArchiveBoxIcon className="w-6 h-6 mb-1" />}
-        label="إدارة المخزون"
+        label="المخزون"
         isActive={currentPage === Page.Inventory}
         onClick={() => navigateTo(Page.Inventory)}
+      />
+      <NavItem
+        icon={<CalendarDaysIcon className="w-6 h-6 mb-1" />}
+        label="الاستهلاك"
+        isActive={currentPage === Page.WeeklyConsumption}
+        onClick={() => navigateTo(Page.WeeklyConsumption)}
       />
       <NavItem
         icon={<PlusIcon className="w-6 h-6 mb-1" />}
