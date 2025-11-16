@@ -24,19 +24,27 @@ const consumptionData: ConsumptionRecord[] = [
   { day: 'الجمعة', date: '2025/11/14', sip: '0521230243', cableLength: '20M' },
 ];
 
-interface EtatMaterielRecord {
+interface EtatMaterielItem {
     designation: string;
     quantite: string;
-    remarques: string;
+    unit?: string;
 }
 
-const initialEtatMaterielData: EtatMaterielRecord[] = [
-    { designation: 'CABLE', quantite: '', remarques: '' },
-    { designation: 'JARRETIÈRE', quantite: '', remarques: '' },
-    { designation: 'BRISE PTO', quantite: '', remarques: '' },
-    { designation: 'F6600', quantite: '', remarques: '' },
-    { designation: 'F680', quantite: '', remarques: '' },
-];
+interface EtatMaterielState {
+    technicianName: string;
+    items: EtatMaterielItem[];
+}
+
+const initialEtatState: EtatMaterielState = {
+    technicianName: 'ISMAIL ABM',
+    items: [
+        { designation: 'Routeur Complet 680', quantite: '00' },
+        { designation: 'Routeur Complet 6600', quantite: '28' },
+        { designation: 'Câble Outdoor', quantite: '00', unit: 'm' },
+        { designation: 'Câble indoor', quantite: '00', unit: 'm' },
+        { designation: 'Les fix', quantite: '0' },
+    ],
+};
 
 
 interface LogisticsPageProps {
@@ -57,8 +65,8 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
     const [totalCableLength, setTotalCableLength] = useState('');
     
     // --- State and Logic for ETAT MATÉRIEL ---
-    const etatMaterielStorageKey = 'etatMaterielData';
-    const [etatMaterielData, setEtatMaterielData] = useState<EtatMaterielRecord[]>(initialEtatMaterielData);
+    const etatStorageKey = 'etatMaterielState';
+    const [etatState, setEtatState] = useState<EtatMaterielState>(initialEtatState);
 
     useEffect(() => {
         try {
@@ -84,11 +92,11 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
         } catch (error) { console.error('Failed to load cable inventory data', error); }
         
         try {
-            const savedData = localStorage.getItem(etatMaterielStorageKey);
+            const savedData = localStorage.getItem(etatStorageKey);
             if (savedData) {
                 const parsedData = JSON.parse(savedData);
-                if (Array.isArray(parsedData) && parsedData.length === initialEtatMaterielData.length) {
-                    setEtatMaterielData(parsedData);
+                if (parsedData && typeof parsedData.technicianName === 'string' && Array.isArray(parsedData.items)) {
+                    setEtatState(parsedData);
                 }
             }
         } catch (error) { console.error('Failed to load ETAT MATERIEL data from localStorage', error); }
@@ -121,15 +129,25 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
         showToast('تم مسح حقول الكابل.', 'success');
     };
     
-    const handleEtatMaterielChange = (index: number, field: 'quantite' | 'remarques', value: string) => {
-        const newData = [...etatMaterielData];
-        newData[index][field] = value;
-        setEtatMaterielData(newData);
+    const handleTechnicianNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEtatState(prevState => ({
+            ...prevState,
+            technicianName: e.target.value,
+        }));
+    };
+
+    const handleItemQuantityChange = (index: number, value: string) => {
+        const newItems = [...etatState.items];
+        newItems[index] = { ...newItems[index], quantite: value };
+        setEtatState(prevState => ({
+            ...prevState,
+            items: newItems,
+        }));
     };
 
     const handleEtatMaterielSave = () => {
         try {
-            localStorage.setItem(etatMaterielStorageKey, JSON.stringify(etatMaterielData));
+            localStorage.setItem(etatStorageKey, JSON.stringify(etatState));
             showToast('تم حفظ بيانات ETAT MATÉRIEL!', 'success');
         } catch (error) {
             console.error('Failed to save ETAT MATERIEL data to localStorage', error);
@@ -232,39 +250,41 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
     const renderEtatMaterielContent = () => (
         <div className="max-w-lg mx-auto animate-fade-in">
             <div className="bg-white rounded-xl shadow-md overflow-hidden">
-                <div className="p-4 border-b border-gray-200">
+                 <div className="p-4 border-b border-gray-200">
                     <h2 className="text-xl font-bold text-gray-800 text-center">ETAT MATÉRIEL</h2>
+                     <input 
+                        type="text"
+                        value={etatState.technicianName}
+                        onChange={handleTechnicianNameChange}
+                        className="w-full text-center text-lg font-semibold text-blue-600 bg-gray-50 border-0 border-b-2 border-gray-200 focus:ring-0 focus:border-blue-500 transition mt-2 p-1"
+                        placeholder="اسم الفني"
+                    />
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-right">
                         <thead className="bg-gray-50">
                             <tr>
                                 <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">DÉSIGNATION</th>
-                                <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">QUANTITÉ</th>
-                                <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600">REMARQUES</th>
+                                <th scope="col" className="py-3 px-4 text-sm font-semibold text-gray-600 text-center">QUANTITÉ</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {etatMaterielData.map((item, index) => (
+                            {etatState.items.map((item, index) => (
                                 <tr key={index} className="hover:bg-gray-50">
                                     <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-800 font-semibold">{item.designation}</td>
                                     <td className="py-3 px-4 whitespace-nowrap">
-                                        <input 
-                                            type="text" 
-                                            value={item.quantite}
-                                            onChange={(e) => handleEtatMaterielChange(index, 'quantite', e.target.value)}
-                                            className="w-full p-1 border border-gray-200 bg-gray-50 rounded-md text-center focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                            placeholder="--"
-                                        />
-                                    </td>
-                                    <td className="py-3 px-4 whitespace-nowrap">
-                                        <input 
-                                            type="text" 
-                                            value={item.remarques}
-                                            onChange={(e) => handleEtatMaterielChange(index, 'remarques', e.target.value)}
-                                            className="w-full p-1 border border-gray-200 bg-gray-50 rounded-md text-right focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" 
-                                            placeholder="--"
-                                        />
+                                        <div className="relative">
+                                            <input 
+                                                type="text" 
+                                                value={item.quantite}
+                                                onChange={(e) => handleItemQuantityChange(index, e.target.value)}
+                                                className={`w-full p-1 border border-gray-200 bg-gray-50 rounded-md text-center focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${item.unit ? 'pr-6' : ''}`}
+                                                placeholder="--"
+                                            />
+                                            {item.unit && (
+                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">{item.unit}</span>
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -281,16 +301,31 @@ const LogisticsPage: React.FC<LogisticsPageProps> = ({ onBack, showToast }) => {
         </div>
     );
 
+    const renderReportsContent = () => (
+        <div className="max-w-lg mx-auto animate-fade-in">
+            <div className="bg-white rounded-xl shadow-md overflow-hidden p-8 text-center">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4">التقارير والسجلات</h2>
+                <p className="text-gray-600">
+                    هذا القسم مخصص لعرض التقارير التفصيلية وسجلات الأنشطة.
+                    <br />
+                    <span className="font-semibold text-blue-600">قيد الإنشاء حاليًا.</span>
+                </p>
+            </div>
+        </div>
+    );
+
     return (
         <PageWrapper title="المخزون والاستهلاك" onBack={onBack}>
-            <div className="flex flex-row items-stretch justify-center gap-2 sm:gap-4 mb-8">
+            <div className="flex flex-row flex-wrap items-stretch justify-center gap-2 sm:gap-4 mb-8">
                 <TabButton label="ETAT MATÉRIEL" isActive={activeTab === 'etat_materiel'} onClick={() => setActiveTab('etat_materiel')} />
                 <TabButton label="إدارة المخزون" isActive={activeTab === 'inventory'} onClick={() => setActiveTab('inventory')} />
+                <TabButton label="التقارير والسجلات" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
                 <TabButton label="الاستهلاك الأسبوعي" isActive={activeTab === 'consumption'} onClick={() => setActiveTab('consumption')} />
             </div>
+            {activeTab === 'etat_materiel' && renderEtatMaterielContent()}
             {activeTab === 'inventory' && renderInventoryContent()}
             {activeTab === 'consumption' && renderConsumptionContent()}
-            {activeTab === 'etat_materiel' && renderEtatMaterielContent()}
+            {activeTab === 'reports' && renderReportsContent()}
         </PageWrapper>
     );
 };
