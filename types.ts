@@ -1,9 +1,9 @@
 export enum Page {
   Home = 'HOME',
   NewData = 'NEW_DATA',
-  Database = 'DATABASE',
   Settings = 'SETTINGS',
   CameraScan = 'CAMERA_SCAN',
+  Inventory = 'INVENTORY',
 }
 
 export interface FormData {

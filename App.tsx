@@ -3,11 +3,11 @@ import { Page, FormData } from './types';
 import SplashScreen from './components/SplashScreen';
 import HomePage from './components/HomePage';
 import NewDataPage from './components/NewDataPage';
-import DatabasePage from './components/DatabasePage';
 import SettingsPage from './components/SettingsPage';
 import Toast from './components/Toast';
 import CameraScan from './components/CameraScan';
 import BottomNavBar from './components/BottomNavBar';
+import InventoryPage from './components/InventoryPage';
 
 // For storing editing state
 interface EditState {
@@ -83,7 +83,7 @@ const App: React.FC = () => {
 
   const navigateTo = (page: Page) => {
     // When navigating to NewData from anywhere else but the database "edit" button, clear the edit state.
-    if (page === Page.NewData && currentPage !== Page.Database && currentPage !== Page.CameraScan) {
+    if (page === Page.NewData && currentPage !== Page.Home && currentPage !== Page.CameraScan) {
         setRecordToEdit(null);
     }
     setCurrentPage(page);
@@ -125,7 +125,7 @@ const App: React.FC = () => {
     });
     showToast('تم تحديث البيانات بنجاح!', 'success');
     setRecordToEdit(null);
-    navigateTo(Page.Database);
+    navigateTo(Page.Home);
   };
   
   const handleStartEdit = (index: number) => {
@@ -140,7 +140,7 @@ const App: React.FC = () => {
   const handleBackFromForm = () => {
     if (recordToEdit) {
       setRecordToEdit(null);
-      navigateTo(Page.Database);
+      navigateTo(Page.Home);
     } else {
       goHome();
     }
@@ -165,7 +165,7 @@ const App: React.FC = () => {
     navigateTo(Page.NewData);
   };
 
-  const pagesWithNavBar = [Page.Home, Page.Database, Page.Settings];
+  const pagesWithNavBar = [Page.Home, Page.Inventory, Page.NewData, Page.Settings];
 
   const renderPage = () => {
     switch (currentPage) {
@@ -183,15 +183,8 @@ const App: React.FC = () => {
             apiKey={apiKey}
           />
         );
-      case Page.Database:
-        return (
-            <DatabasePage 
-                onBack={goHome} 
-                records={records} 
-                onEdit={handleStartEdit}
-                onDelete={handleDeleteRecord}
-            />
-        );
+      case Page.Inventory:
+        return <InventoryPage onBack={goHome} showToast={showToast} />;
       case Page.Settings:
         return <SettingsPage 
           onBack={goHome} 
@@ -211,7 +204,11 @@ const App: React.FC = () => {
         />;
       case Page.Home:
       default:
-        return <HomePage navigateTo={navigateTo} />;
+        return <HomePage 
+            records={records} 
+            onEdit={handleStartEdit}
+            onDelete={handleDeleteRecord}
+        />;
     }
   };
   

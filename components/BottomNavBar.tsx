@@ -1,9 +1,9 @@
 import React from 'react';
 import { Page } from '../types';
 import HomeIcon from './icons/HomeIcon';
-import DatabaseIcon from './icons/DatabaseIcon';
-import PlusIcon from './icons/PlusIcon';
 import SettingsIcon from './icons/SettingsIcon';
+import ArchiveBoxIcon from './icons/ArchiveBoxIcon';
+import PlusIcon from './icons/PlusIcon';
 
 interface BottomNavBarProps {
   currentPage: Page;
@@ -41,15 +41,15 @@ const BottomNavBar: React.FC<BottomNavBarProps> = ({ currentPage, navigateTo }) 
         onClick={() => navigateTo(Page.Home)}
       />
       <NavItem
-        icon={<DatabaseIcon className="w-6 h-6 mb-1" />}
-        label="البيانات"
-        isActive={currentPage === Page.Database}
-        onClick={() => navigateTo(Page.Database)}
+        icon={<ArchiveBoxIcon className="w-6 h-6 mb-1" />}
+        label="إدارة المخزون"
+        isActive={currentPage === Page.Inventory}
+        onClick={() => navigateTo(Page.Inventory)}
       />
       <NavItem
         icon={<PlusIcon className="w-6 h-6 mb-1" />}
         label="إضافة"
-        isActive={false} // This button navigates away, so it's never "active" in the nav bar itself
+        isActive={currentPage === Page.NewData}
         onClick={() => navigateTo(Page.NewData)}
       />
       <NavItem
